@@ -2,6 +2,10 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
+<!-- no-cache-cet6 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>六级单词大冒险</title>
 <style>
@@ -1661,7 +1665,7 @@ body { -ms-overflow-style: none; scrollbar-width: none; }
 <script type="text/template" id="tpl-pages/index/index"><!-- pages/index/index.wxml -->
 <div class="pixel-container main-bg">
   <!-- 署名 -->
-  <div class="home-signature">@吵吵</div>
+  <div class="home-signature">@吵吵 · v2.1</div>
   <!-- 像素星空背景 -->
   <div class="starfield">
     <div data-block="1" wx:for="{{stars}}" wx:key="index">
@@ -8585,7 +8589,7 @@ require('pages/result/result');
 _reLaunch('/pages/index/index');
 </script>
 
-<!-- 像素风背景音乐 + 音效（Web Audio，无需外部文件） -->
+<!-- 像素风背景音乐 + 音效（Web Audio，无需外部文件）· build v2.1 音频面板可收缩 -->
 <script>
 (function () {
   var ctx = null, master = null, musicOn = true, started = false, timer = null;
