@@ -8700,39 +8700,50 @@ _reLaunch('/pages/index/index');
   var panel = document.createElement('div');
   panel.id = 'cet6-audio-panel';
   panel.style.cssText = 'position:fixed;left:10px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:99999;' +
-    'display:flex;align-items:center;gap:5px;padding:6px 7px;background:#1a1a2e;border:3px solid #495057;' +
+    'display:flex;align-items:center;gap:5px;padding:5px;background:#1a1a2e;border:3px solid #495057;' +
     'box-shadow:4px 4px 0 rgba(0,0,0,.6);font:bold 13px/1 "Courier New",monospace;color:#f4d35e;';
 
-  function mkBtn(id, text) {
+  function mkBtn(id, text, minW) {
     var b = document.createElement('div');
     b.id = id;
     b.textContent = text;
-    b.style.cssText = 'min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;' +
+    b.style.cssText = 'min-width:' + (minW || 24) + 'px;height:26px;display:flex;align-items:center;justify-content:center;' +
       'padding:0 5px;background:#0f3460;border:2px solid #495057;color:#f4d35e;cursor:pointer;' +
       'box-shadow:2px 2px 0 rgba(0,0,0,.5);user-select:none;';
-    b.addEventListener('pointerdown', function (ev) { b.style.transform = 'translate(1px,1px)'; b.style.boxShadow = 'none'; });
+    b.addEventListener('pointerdown', function () { b.style.transform = 'translate(1px,1px)'; b.style.boxShadow = 'none'; });
     b.addEventListener('pointerup', function () { b.style.transform = ''; b.style.boxShadow = '2px 2px 0 rgba(0,0,0,.5)'; });
     b.addEventListener('click', function (ev) { ev.stopPropagation(); });
     return b;
   }
 
-  var toggleEl = mkBtn('cet6-music-toggle', musicOn ? '♪' : '✕');
+  var collapseEl = mkBtn('cet6-audio-collapse', '♪', 30);
+  collapseEl.style.padding = '0';
+  collapseEl.style.height = '30px';
+  var controlsEl = document.createElement('div');
+  controlsEl.id = 'cet6-audio-controls';
+  controlsEl.style.cssText = 'display:none;align-items:center;gap:5px;';
+
+  var toggleEl = mkBtn('cet6-music-toggle', '♪开', 40);
   var minusEl = mkBtn('cet6-vol-minus', '−');
   var plusEl = mkBtn('cet6-vol-plus', '+');
   var levelEl = document.createElement('div');
   levelEl.id = 'cet6-vol-level';
-  levelEl.style.cssText = 'min-width:64px;text-align:center;color:#adb5bd;font-size:12px;';
+  levelEl.style.cssText = 'min-width:56px;text-align:center;color:#adb5bd;font-size:12px;';
 
-  function bars(i) {
-    var s = '';
-    for (var k = 0; k < LEVELS.length; k++) s += (k <= i ? '▮' : '▯');
-    return s;
-  }
+  var open = false;
+  try { open = localStorage.getItem('cet6_audio_open') === '1'; } catch (e) {}
+
+  function bars(i) { var s = ''; for (var k = 0; k < LEVELS.length; k++) s += (k <= i ? '▮' : '▯'); return s; }
+
   function updatePanel() {
-    toggleEl.textContent = musicOn ? '♪' : '✕';
+    collapseEl.textContent = open ? '收起' : '♪';
+    collapseEl.style.color = musicOn ? '#f4d35e' : '#6c757d';
+    controlsEl.style.display = open ? 'flex' : 'none';
+    toggleEl.textContent = musicOn ? '♪开' : '✕关';
     toggleEl.style.color = musicOn ? '#f4d35e' : '#6c757d';
     levelEl.textContent = bars(levelIdx) + ' ' + (levelIdx + 1) + '/5';
   }
+
   function applyVolume(save) {
     volume = LEVELS[levelIdx];
     if (master) master.gain.value = volume;
@@ -8740,11 +8751,21 @@ _reLaunch('/pages/index/index');
     updatePanel();
   }
 
+  collapseEl.addEventListener('click', function () {
+    open = !open;
+    try { localStorage.setItem('cet6_audio_open', open ? '1' : '0'); } catch (e) {}
+    updatePanel();
+  });
   minusEl.addEventListener('click', function () { if (levelIdx > 0) { levelIdx--; applyVolume(true); sfx('click'); } });
   plusEl.addEventListener('click', function () { if (levelIdx < LEVELS.length - 1) { levelIdx++; applyVolume(true); sfx('click'); } });
   toggleEl.addEventListener('click', function () { musicOn = !musicOn; if (musicOn) startMusic(); else stopMusic(); updatePanel(); });
 
-  panel.appendChild(toggleEl); panel.appendChild(minusEl); panel.appendChild(levelEl); panel.appendChild(plusEl);
+  controlsEl.appendChild(toggleEl);
+  controlsEl.appendChild(minusEl);
+  controlsEl.appendChild(levelEl);
+  controlsEl.appendChild(plusEl);
+  panel.appendChild(collapseEl);
+  panel.appendChild(controlsEl);
   document.body.appendChild(panel);
   updatePanel();
 
