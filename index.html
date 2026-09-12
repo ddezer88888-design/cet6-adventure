@@ -8590,6 +8590,10 @@ _reLaunch('/pages/index/index');
 (function () {
   var ctx = null, master = null, musicOn = true, started = false, timer = null;
   var nextTime = 0, step = 0, lastFb = '';
+  var LEVELS = [0.08, 0.2, 0.35, 0.5, 0.7];
+  var levelIdx = 3;
+  try { var sv = parseInt(localStorage.getItem('cet6_vol_idx'), 10); if (!isNaN(sv) && sv >= 0 && sv < LEVELS.length) levelIdx = sv; } catch (e) {}
+  var volume = LEVELS[levelIdx];
   var BPM = 108, STEP = 60 / BPM / 2;
   var N = {A3:220.00,B3:246.94,C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196.00,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99};
   var BARS = [
@@ -8605,7 +8609,7 @@ _reLaunch('/pages/index/index');
     if (!AC) return false;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.45;
+    master.gain.value = volume;
     master.connect(ctx.destination);
     return true;
   }
@@ -8644,13 +8648,13 @@ _reLaunch('/pages/index/index');
     if (started) return;
     started = true; step = 0; nextTime = ctx.currentTime + 0.08;
     timer = setInterval(tick, 25); tick();
-    updateBtn();
+    updatePanel();
   }
 
   function stopMusic() {
     if (timer) { clearInterval(timer); timer = null; }
     started = false;
-    updateBtn();
+    updatePanel();
   }
 
   function sfx(kind) {
@@ -8692,22 +8696,62 @@ _reLaunch('/pages/index/index');
   document.addEventListener('pointerdown', firstTouch, { once: true, capture: true });
   document.addEventListener('touchstart', firstTouch, { once: true, capture: true });
 
-  // 音乐开关按钮
-  var btn = document.createElement('div');
-  btn.id = 'cet6-music-btn';
-  btn.style.cssText = 'position:fixed;left:10px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:99999;' +
-    'display:flex;align-items:center;gap:6px;padding:8px 12px;background:#1a1a2e;color:#f4d35e;' +
-    'border:3px solid #f4d35e;font:bold 13px/1 monospace;box-shadow:4px 4px 0 rgba(0,0,0,.6);cursor:pointer;';
-  btn.textContent = '♪ 音乐开';
-  document.body.appendChild(btn);
-  function updateBtn() { btn.textContent = musicOn ? '♪ 音乐开' : '✕ 音乐关'; btn.style.color = musicOn ? '#f4d35e' : '#6c757d'; btn.style.borderColor = musicOn ? '#f4d35e' : '#495057'; }
-  btn.addEventListener('click', function (ev) {
-    ev.stopPropagation();
-    musicOn = !musicOn;
-    if (musicOn) startMusic(); else stopMusic();
-  });
+  // 音乐开关 + 音量调节面板
+  var panel = document.createElement('div');
+  panel.id = 'cet6-audio-panel';
+  panel.style.cssText = 'position:fixed;left:10px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:99999;' +
+    'display:flex;align-items:center;gap:5px;padding:6px 7px;background:#1a1a2e;border:3px solid #495057;' +
+    'box-shadow:4px 4px 0 rgba(0,0,0,.6);font:bold 13px/1 "Courier New",monospace;color:#f4d35e;';
 
-  window.__cet6Audio = { state: function () { return { musicOn: musicOn, started: started, ctxState: ctx ? ctx.state : 'none' }; } };
+  function mkBtn(id, text) {
+    var b = document.createElement('div');
+    b.id = id;
+    b.textContent = text;
+    b.style.cssText = 'min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;' +
+      'padding:0 5px;background:#0f3460;border:2px solid #495057;color:#f4d35e;cursor:pointer;' +
+      'box-shadow:2px 2px 0 rgba(0,0,0,.5);user-select:none;';
+    b.addEventListener('pointerdown', function (ev) { b.style.transform = 'translate(1px,1px)'; b.style.boxShadow = 'none'; });
+    b.addEventListener('pointerup', function () { b.style.transform = ''; b.style.boxShadow = '2px 2px 0 rgba(0,0,0,.5)'; });
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    return b;
+  }
+
+  var toggleEl = mkBtn('cet6-music-toggle', musicOn ? '♪' : '✕');
+  var minusEl = mkBtn('cet6-vol-minus', '−');
+  var plusEl = mkBtn('cet6-vol-plus', '+');
+  var levelEl = document.createElement('div');
+  levelEl.id = 'cet6-vol-level';
+  levelEl.style.cssText = 'min-width:64px;text-align:center;color:#adb5bd;font-size:12px;';
+
+  function bars(i) {
+    var s = '';
+    for (var k = 0; k < LEVELS.length; k++) s += (k <= i ? '▮' : '▯');
+    return s;
+  }
+  function updatePanel() {
+    toggleEl.textContent = musicOn ? '♪' : '✕';
+    toggleEl.style.color = musicOn ? '#f4d35e' : '#6c757d';
+    levelEl.textContent = bars(levelIdx) + ' ' + (levelIdx + 1) + '/5';
+  }
+  function applyVolume(save) {
+    volume = LEVELS[levelIdx];
+    if (master) master.gain.value = volume;
+    if (save) { try { localStorage.setItem('cet6_vol_idx', String(levelIdx)); } catch (e) {} }
+    updatePanel();
+  }
+
+  minusEl.addEventListener('click', function () { if (levelIdx > 0) { levelIdx--; applyVolume(true); sfx('click'); } });
+  plusEl.addEventListener('click', function () { if (levelIdx < LEVELS.length - 1) { levelIdx++; applyVolume(true); sfx('click'); } });
+  toggleEl.addEventListener('click', function () { musicOn = !musicOn; if (musicOn) startMusic(); else stopMusic(); updatePanel(); });
+
+  panel.appendChild(toggleEl); panel.appendChild(minusEl); panel.appendChild(levelEl); panel.appendChild(plusEl);
+  document.body.appendChild(panel);
+  updatePanel();
+
+  window.__cet6Audio = {
+    state: function () { return { musicOn: musicOn, started: started, ctxState: ctx ? ctx.state : 'none', level: levelIdx + 1, volume: volume }; },
+    setLevel: function (i) { levelIdx = Math.max(0, Math.min(LEVELS.length - 1, i)); applyVolume(true); }
+  };
 })();
 </script>
 </body>
